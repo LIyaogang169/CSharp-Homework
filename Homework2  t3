@@ -1,0 +1,33 @@
+using System;
+
+namespace ConsoleApp3
+{
+    class Program
+    {
+        private static string i;
+        static void Main(string[] args)
+        { 
+            int []a = new int[101];
+            for(int i= 2;i<= 100; i++)
+            {
+                a[i] = i;
+            }
+            int p, q;
+            for(int i = 2; i <= 100; i++)
+            {
+                if (a[i] != 0)
+                {
+                    for (q = 2; (p = q * i) <= 100; q++)
+                    {
+                        a[p] = 0;
+                    }
+                }
+            }
+            for (int i=2;i<= 100; i++)
+            {
+                if (a[i] != 0)
+                Console.WriteLine(a[i]+ "是质数");
+            }
+        }
+    }
+}
