@@ -1,0 +1,31 @@
+using System;
+
+namespace ConsoleAppt1
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+                int num = 2;
+                Console.WriteLine("请输入一个整数n:");
+                string num1 = Console.ReadLine();
+                int n = Convert.ToInt32(num1);
+            Console.WriteLine("该整数n的素数因子为：");
+            while (true)
+            {
+                if (n == 1)
+                {
+                    break;
+                }
+                if ((n % num) == 0)
+                {
+                    n = n / num;
+                    Console.WriteLine(num + "");
+                }else {
+                    num++;
+                }
+            }
+        }
+    }
+}
+ 
