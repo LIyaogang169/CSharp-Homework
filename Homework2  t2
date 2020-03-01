@@ -1,0 +1,87 @@
+using System;
+
+namespace ConsoleApp1
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            int[] a = { 2, 5, 6, 11, 4, 3, 1, 23 };
+            Console.Write("已知数组为：");
+            foreach(int i in a)
+            {
+                Console.Write(i + ",");
+            }
+            Console.WriteLine();
+            Console.WriteLine("该数组的最大值是:" + max(a));
+            Console.WriteLine("该数组的最小值是:" + min(a));
+            Console.WriteLine("该数组各元素之和是:" + sum(a));
+            Console.WriteLine("该数组元素的平均值是" + avr(a));
+        }
+        public static int sum(int[] b)
+        {
+            int sum = 0;
+            for (int i = 0; i < b.Length; i++)
+            {
+                sum += b[i];
+            }
+            return sum;
+        }
+        public static double avr(int[] c)
+        {
+            double sum = 0;
+            double avr;
+            for (int i = 0; i < c.Length; i++)
+            {
+                sum += c[i];
+            }
+            avr = sum / c.Length;
+            return avr;
+        }
+        public static int max(int[] d)
+        {
+            for (int i = 1; i <= d.Length - 1; i++)
+            {
+                for (int j = 0; j < d.Length - i; j++)
+                {
+                    if (d[j] > d[j + 1])
+                    {
+                        int temp = d[j + 1];
+                        d[j + 1] = d[j];
+                        d[j] = temp;
+                    }
+                }
+            }
+            int max = d[d.Length - 1];
+            return max;
+
+        }
+        public static int min(int[] d)
+        {
+            for (int i = 1; i <= d.Length - 1; i++)
+            {
+                for (int j = 0; j < d.Length - i; j++)
+                {
+                    if (d[j] > d[j + 1])
+                    {
+                        int temp = d[j + 1];
+                        d[j + 1] = d[j];
+                        d[j] = temp;
+                    }
+                }
+            }
+            int min = d[0];
+            return min;
+
+        }
+        public static void print(int[] f)
+        {
+            Console.WriteLine("The array is:");
+            for (int i = 0; i < f.Length; i++)
+            {
+                Console.WriteLine(f[i] + " ");
+            }
+            Console.WriteLine();
+        }
+    }
+}
