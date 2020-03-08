@@ -1,0 +1,167 @@
+using System;
+
+namespace ConsoleApp1
+{
+    public interface IShape
+    {
+        void Initialize();
+        double GetArea();
+       // Boolean isLegal();                                         
+    }
+
+    public interface IDisplay
+    {
+        void Show();
+    }
+    class Triangle : IShape,IDisplay
+    {
+        private double a;
+        private double b;
+        private double c;
+        public void Initialize() 
+        {
+
+            Console.WriteLine("请输入三角形三边长:");
+            do
+            {
+                a = double.Parse(Console.ReadLine());
+                b = double.Parse(Console.ReadLine());
+                c = double.Parse(Console.ReadLine());
+                if (a + b > c && a + c > b && b + c > a)
+                {
+                    Console.WriteLine("输入数据正确！");
+                }
+                else
+                {
+                    Console.WriteLine("输入数据错误！");
+                }
+            }
+            while (a<=0);
+        }
+
+        public Triangle()
+        {
+        }
+
+        public double GetArea()
+        {
+            double l = (a + b + c) / 2;
+            double num = Math.Sqrt(l * (l - a) * (l - b) * (l -c));
+           return num;
+        }
+        public void Show()
+        {
+            Console.WriteLine("三角形面积为：{0}", GetArea());
+        }
+    }
+
+
+    class Rectangle : IShape,IDisplay
+    {
+        private double width;
+        private double height;
+        public void Initialize()
+        {
+            Console.WriteLine("请输入正方形边长:");
+            do
+            {
+                width = double.Parse(Console.ReadLine());
+                height = double.Parse(Console.ReadLine());
+                if (width > 0&&height>0)
+                {
+                    Console.WriteLine("输入数据正确！");
+                }
+                else
+                {
+                    Console.WriteLine("输入数据错误！");
+                }
+            }
+            while (width <= 0);
+        }
+        public Rectangle() { }                               
+        Rectangle(double width, double height)
+        {
+            this.width = width;
+            this.height = height;
+        }
+        public double GetArea()
+        {
+            return width * height;
+        }
+        public void Show()
+        {
+            Console.WriteLine("长方形面积为：{0}", GetArea());
+        }
+    }
+
+
+    class Square : IShape,IDisplay
+    {
+        private double sidelength;
+        public void Initialize()
+        {
+            Console.WriteLine("请输入正方形边长:");
+            do
+            {
+                sidelength = double.Parse(Console.ReadLine());
+                if (sidelength>0)
+                {
+                    Console.WriteLine("输入数据正确！");
+                }
+                else
+                {
+                    Console.WriteLine("输入数据错误！");
+                }
+            }
+            while (sidelength <= 0);
+        }
+        public Square() { }
+
+        public Square(double sidelength)
+        {
+            this.sidelength = sidelength;
+        }
+        public double GetArea()
+        {
+            return sidelength * sidelength;
+        }
+        public void Show()
+        {
+            Console.WriteLine("正方形面积为：{0}", GetArea());
+        }
+    }
+
+
+    class ShapeInterface
+    {
+        static void Main(String[] args)
+        {
+            Triangle tr = new Triangle();
+            Rectangle re = new Rectangle();
+            Square sq = new Square();
+            Console.WriteLine("请选择输入的图形：1、三角形，2、矩形，3、正方形 ");
+            string fun = Console.ReadLine();
+           // Console.ReadLine();
+            switch (fun)
+            {
+                case "1":
+                    tr.Initialize();
+                    tr.Show();
+                    break;
+                case "2":
+                    re.Initialize();
+                    re.Show();
+                    break;
+                case "3":
+                    sq.Initialize();
+                    sq.Show();
+                    break;
+                default:
+                    Console.WriteLine("请重新选择运算符：");
+                    string str = Console.ReadLine();
+                    //GetResualt(str, num1, num2);
+                    return;
+            }
+        }
+    }
+}
