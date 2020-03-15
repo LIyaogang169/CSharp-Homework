@@ -1,0 +1,55 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Threading;
+using static System.Console;
+
+namespace EventText
+{
+    public delegate void AlarmClockRun();
+    public class AlarmClock
+    {
+        public event AlarmClockRun ClockTick;
+        public event AlarmClockRun ClockAlarm;
+        private int myhour;
+        private int myminute;
+        private int mysecond;
+        public AlarmClock(int hour,int minute,int second)
+        { 
+            myhour = hour;
+            myminute = minute;
+            mysecond = second;
+        }
+        public void Tick()
+        {
+                WriteLine("闹钟在" + DateTime.Now.ToLongTimeString().ToString()+"滴答");
+        }
+        public void Alarm()
+        {
+            WriteLine("我的闹钟响了！");
+        }
+        public void start()
+        {
+            while (true)
+            {
+                ClockTick();
+                if (DateTime.Now.Hour == myhour && DateTime.Now.Minute == myminute && DateTime.Now.Second == mysecond)
+                    ClockAlarm();
+                Thread.Sleep(1000);
+            }
+        }
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            AlarmClock clock1 = new AlarmClock(11, 31,10);
+            clock1.ClockTick += clock1.Tick;
+            clock1.ClockAlarm += clock1.Alarm;
+            clock1.start();
+        }
+    }
+}
