@@ -1,0 +1,51 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using static System.Console;
+
+namespace List
+{
+    public class ArrayList<T>
+    {
+        private T[] array;
+        public ArrayList(int size)
+        {
+            array = new T[size];
+        }
+        public void AddItem(int n, T x)
+        {
+            array[n] = x;
+        }
+        public void Foreach(Action<T> act)
+        {
+            for(int i = 0; i < array.Length; i++)
+            {
+                act(array[i]);
+            }
+        }
+    }
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            ArrayList<int> list = new ArrayList<int>(10);
+            int sum = 0;int max = 0;int min = Int16.MaxValue;
+            Random random = new Random();
+            for (int i = 0; i < 10; i++)
+            {
+                list.AddItem(i, random.Next(0,20));
+            }
+            list.Foreach(s => Write(s + " "));
+            WriteLine();
+            list.Foreach(s => sum += s);
+            WriteLine("和为："+sum);
+            list.Foreach(s=> { if (max < s) max = s; });
+            list.Foreach(s => { if (min > s) min = s; });
+            WriteLine("最小值为：" + min);
+            WriteLine("最大值为：" + max);
+            ReadKey();
+        }
+    }
+}
