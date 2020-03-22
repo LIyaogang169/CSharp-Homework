@@ -1,0 +1,119 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Order
+{
+    class Order
+    {
+        public int OrderID;
+        public string OrderTime;
+        public int OrderAmount;
+       List<OrderItem> OrderItemList = new List<OrderItem>();
+
+        public Order(object orderI1, List<OrderItem> list)
+        {
+        }
+
+        public Order(int OrderID,string OrderTime,int OrderAmount,int i,List<OrderItem>list)
+    {
+            OrderItem = new OrderItem();
+            this.OrderAmount = OrderAmount;
+            this.OrderID = OrderID;
+            OrderItem.OrderTime = OrderTime;
+            foreach(OrderItem temp in OrderItemList)
+            {
+                OrderItemList.Add(temp);
+            }
+        
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is Order order &&
+                   OrderID == order.OrderID &&
+                   OrderTime == order.OrderTime &&
+                   OrderAmount == order.OrderAmount &&
+                   EqualityComparer<List<OrderItem>>.Default.Equals(OrderItemList, order.OrderItemList);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(OrderID, OrderTime, OrderAmount, OrderItemList);
+        }
+
+        /* int IComparer<Order>(Order x,Order y)
+         {
+
+         }*/
+    }
+    class OrderItem
+    {
+        public int OrderID { get; set; }
+        public String OrderTime { get; set; }
+        public string Customer { get; set; }
+        public string ProductName { set; get; }
+        public double ProductPrice { set; get; }
+        public override String ToString()
+        {
+            return "OrderID:" + OrderID + "Customer" + Customer + "ProductName" + ProductName + "ProductPrice" + ProductPrice;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is OrderItem item &&
+                   OrderID == item.OrderID &&
+                   OrderTime == item.OrderTime &&
+                   Customer == item.Customer &&
+                   ProductName == item.ProductName &&
+                   ProductPrice == item.ProductPrice;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(OrderID, OrderTime, Customer, ProductName, ProductPrice);
+        }
+
+        public OrderItem(int i,string c,string n,double p)
+        {
+            this.OrderID = i;
+            this.Customer = c;
+            this.ProductName = n;
+            this.ProductPrice = p;
+        }
+
+        public OrderItem()
+        {
+        }
+    }
+    class OrderService
+    {
+    private List<Order> OrderList = new List<Order>();
+        public void QueryOrderById(int id)
+        {
+            var Query = from Order in OrderList
+                        where Order.OrderID = id
+                        orderby OrderAmount
+                        select Order;
+            foreach(var q in Query)
+            {
+                Console.WriteLine(q);
+            }
+
+        }
+        public void AddOrder(int OrderI1, List<OrderItem> list)
+        {
+            Order temp = new Order(OrderI1, list);
+            OrderList.Add(temp);
+        }
+
+    }
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            OrderService orderservice = new OrderService();
+            List<OrderItem> OrderItemList = new List<OrderItem>(new OrderItem[]);
+        }
+    }
+}
