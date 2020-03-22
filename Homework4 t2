@@ -28,7 +28,7 @@ namespace EventText
         }
         public void Alarm()
         {
-            WriteLine("我的闹钟响了！");
+            WriteLine("闹钟响了!!!");
         }
         public void start()
         {
@@ -46,7 +46,7 @@ namespace EventText
     {
         static void Main(string[] args)
         {
-            AlarmClock clock1 = new AlarmClock(11, 31,10);
+            AlarmClock clock1 = new AlarmClock(20, 58,44);
             clock1.ClockTick += clock1.Tick;
             clock1.ClockAlarm += clock1.Alarm;
             clock1.start();
