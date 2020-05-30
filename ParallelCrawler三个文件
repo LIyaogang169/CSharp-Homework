@@ -1,0 +1,367 @@
+ParallelCrawler.cs
+using System;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace CrawlerForm {
+  class Crawler {
+
+        public string HostFilter { get; set; }
+        public string FileFilter { get; set; }
+        public int MaxPage { get; set; }
+        public string Startrl { get; set; }
+        public Encoding HtmlEncoding { get; set; }
+
+        public event Action<Crawler> CrawlerStopped;
+    public event Action<Crawler, int,string, string> PageDownloaded;
+
+    private ConcurrentDictionary<string, bool> urls = new ConcurrentDictionary<string, bool>();
+    private ConcurrentQueue<string> pending = new ConcurrentQueue<string>();
+
+    //URL检测表达式
+    private readonly string urlDetectRegex = @"(href|HREF)\s*=\s*[""'](?<url>[^""'#>]+)[""']";
+    public static readonly string urlParseRegex = @"^(?<site>https?://(?<host>[\w\d.]+)(:\d+)?($|/))([\w\d]+/)*(?<file>[^#?]*)";
+
+    public Crawler() {
+      MaxPage = 100;
+      HtmlEncoding = Encoding.UTF8;
+    }
+
+    public void Start() {
+      urls.Clear();
+      pending = new ConcurrentQueue<string>();
+      pending.Enqueue(StartURL);
+
+      List<Task> tasks = new List<Task>();
+      int complatedCount = 0;//已完成的任务数
+      PageDownloaded +=(crawler,index,url,info)=> { complatedCount++; };
+
+      while (tasks.Count<MaxPage) {
+        if(!pending.TryDequeue(out string url)) {
+          if (complatedCount < tasks.Count) {
+            continue;
+          } else {
+            break;
+          }
+        }
+
+        int index = tasks.Count;
+        Task task=Task.Run(() => DownloadAndParse(url, index));
+        tasks.Add(task);
+      }
+
+      Task.WaitAll(tasks.ToArray()); //等待剩余任务执行完
+      CrawlerStopped(this);
+    }
+
+    //url: 待处理网址  index：任务序号
+    private void DownloadAndParse(string url,int index) {
+      try {
+        string html = DownLoad(url,index);
+        urls[url] = true;
+        Parse(html, url);
+        PageDownloaded(this,index, url, "成功");
+      }catch (Exception ex) {
+        PageDownloaded(this,index, url, "错误:" + ex.Message);
+      }
+    }
+
+    //url: 待处理网址 index：任务序号
+    private string DownLoad(string url,int index) {
+      WebClient webClient = new WebClient();
+      webClient.Encoding = HtmlEncoding;
+      string html = webClient.DownloadString(url);
+      File.WriteAllText(index+".html", html, Encoding.UTF8);
+      return html;
+    }
+
+    private void Parse(string html, string pageUrl) {
+      var matches = new Regex(urlDetectRegex).Matches(html);
+      foreach (Match match in matches) {
+        string linkUrl = match.Groups["url"].Value;
+        if (linkUrl == null || linkUrl == "") continue;
+        linkUrl = FixUrl(linkUrl, pageUrl);//转绝对路径
+
+        Match linkUrlMatch = Regex.Match(linkUrl, urlParseRegex);
+        string host = linkUrlMatch.Groups["host"].Value;
+        string file = linkUrlMatch.Groups["file"].Value;
+        if (file == "") file = "index.html";
+
+        if (Regex.IsMatch(host, HostFilter) && Regex.IsMatch(file, FileFilter)
+          && !urls.ContainsKey(linkUrl)) {
+            pending.Enqueue(linkUrl);
+            urls.TryAdd(linkUrl, false);
+        }
+      }
+    }
+
+    //将相对路径转成绝对路径  url为待转地址
+    static private string FixUrl(string url, string baseUrl) {
+      if (url.Contains("://")) {
+        return url;
+      }
+      if (url.StartsWith("//")) {
+        return "http:" + url;
+      }
+      if (url.StartsWith("/")) {
+        Match urlMatch = Regex.Match(baseUrl, urlParseRegex);
+        String site = urlMatch.Groups["site"].Value;
+        return site.EndsWith("/") ? site + url.Substring(1) : site + url;
+      }
+
+      if (url.StartsWith("../")) {
+        url = url.Substring(3);
+        int idx = baseUrl.LastIndexOf('/');
+        return FixUrl(url, baseUrl.Substring(0, idx));
+      }
+
+      if (url.StartsWith("./")) {
+        return FixUrl(url.Substring(2), baseUrl);
+      }
+
+      int end = baseUrl.LastIndexOf("/");
+      return baseUrl.Substring(0, end) + "/" + url;
+    }
+        static class Program
+        {
+            static void Main()
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new Form1());
+            }
+        }
+    }
+
+}
+
+
+
+
+Form1.cs
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace CrawlerForm {
+  public partial class Form1 : Form {
+    BindingSource resultBindingSource = new BindingSource();
+    Crawler crawler = new Crawler();
+    Thread thread = null;
+
+    public Form1() {
+      InitializeComponent();
+      dgvResult.DataSource = resultBindingSource;
+      crawler.PageDownloaded += Crawler_PageDownloaded;
+      crawler.CrawlerStopped += Crawler_CrawlerStopped;
+    }
+
+    private void Crawler_CrawlerStopped(Crawler obj) {
+      Action action = () => lblInfo.Text = "爬虫停止";
+      if (this.InvokeRequired) {
+        this.Invoke(action);
+      }else {
+        action();
+      }
+    }
+
+    private void Crawler_PageDownloaded(Crawler crawler, int index, string url, string info) {
+      var pageInfo = new { Index = index, URL = url, Status = info };
+      Action action = () => { ResultBindingSource.Add(pageInfo); };
+      if (this.InvokeRequired) {
+        this.Invoke(action);
+      }else {
+        action();
+      }
+    }
+
+
+    private void btnStart_Click(object sender, EventArgs e) {
+      ResultBindingSource.Clear();
+      crawler.StartURL = txtUrl.Text;
+
+      Match match = Regex.Match(crawler.StartURL, Crawler.urlParseRegex);
+      if (match.Length == 0) return;
+      string host = match.Groups["host"].Value;
+      crawler.HostFilter = "^" + host + "$";
+      crawler.FileFilter = ".html?$";
+
+      if (thread != null) {
+        thread.Abort();
+      }
+      thread = new Thread(crawler.Start);
+      thread.Start();
+      lblInfo.Text = "爬虫启动。。。。";
+    }
+
+  }
+}
+
+
+
+
+Form1.Designer.cs 以下
+
+namespace CrawlerForm {
+  partial class Form1 {
+    private System.ComponentModel.IContainer components = null;
+
+    /// <summary>
+    /// 清理所有正在使用的资源。
+    /// </summary>
+    /// <param name="disposing">如果应释放托管资源，为 true；否则为 false。</param>
+    protected override void Dispose(bool disposing) {
+      if (disposing && (components != null)) {
+        components.Dispose();
+      }
+      base.Dispose(disposing);
+    }
+
+    #region Windows 窗体设计器生成的代码
+
+    /// <summary>
+    /// 设计器支持所需的方法 - 不要修改
+    /// 使用代码编辑器修改此方法的内容。
+    /// </summary>
+    private void InitializeComponent() {
+      this.dgvResult = new System.Windows.Forms.DataGridView();
+      this.statusStrip1 = new System.Windows.Forms.StatusStrip();
+      this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
+      this.txtUrl = new System.Windows.Forms.TextBox();
+      this.btnStart = new System.Windows.Forms.Button();
+      this.lblInfo = new System.Windows.Forms.Label();
+      this.index = new System.Windows.Forms.DataGridViewTextBoxColumn();
+      this.URL = new System.Windows.Forms.DataGridViewTextBoxColumn();
+      this.status = new System.Windows.Forms.DataGridViewTextBoxColumn();
+      ((System.ComponentModel.ISupportInitialize)(this.dgvResult)).BeginInit();
+      this.flowLayoutPanel1.SuspendLayout();
+      this.SuspendLayout();
+      // 
+      // dgvResult
+      // 
+      this.dgvResult.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+      this.dgvResult.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+      this.dgvResult.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.index,
+            this.URL,
+            this.status});
+      this.dgvResult.Location = new System.Drawing.Point(25, 95);
+      this.dgvResult.Name = "dgvResult";
+      this.dgvResult.RowTemplate.Height = 23;
+      this.dgvResult.Size = new System.Drawing.Size(1015, 454);
+      this.dgvResult.TabIndex = 3;
+      // 
+      // statusStrip1
+      // 
+      this.statusStrip1.Location = new System.Drawing.Point(0, 552);
+      this.statusStrip1.Name = "statusStrip1";
+      this.statusStrip1.Size = new System.Drawing.Size(1063, 22);
+      this.statusStrip1.TabIndex = 4;
+      this.statusStrip1.Text = "statusStrip1";
+      // 
+      // flowLayoutPanel1
+      // 
+      this.flowLayoutPanel1.Controls.Add(this.txtUrl);
+      this.flowLayoutPanel1.Controls.Add(this.btnStart);
+      this.flowLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Top;
+      this.flowLayoutPanel1.Location = new System.Drawing.Point(0, 0);
+      this.flowLayoutPanel1.Name = "flowLayoutPanel1";
+      this.flowLayoutPanel1.Padding = new System.Windows.Forms.Padding(20, 20, 0, 0);
+      this.flowLayoutPanel1.Size = new System.Drawing.Size(1063, 61);
+      this.flowLayoutPanel1.TabIndex = 5;
+      // 
+      // txtUrl
+      // 
+      this.txtUrl.Location = new System.Drawing.Point(23, 23);
+      this.txtUrl.Name = "txtUrl";
+      this.txtUrl.Size = new System.Drawing.Size(412, 21);
+      this.txtUrl.TabIndex = 4;
+      this.txtUrl.Text = "http://www.cnblogs.com/dstang2000/";
+      // 
+      // btnStart
+      // 
+      this.btnStart.Location = new System.Drawing.Point(441, 23);
+      this.btnStart.Name = "btnStart";
+      this.btnStart.Size = new System.Drawing.Size(75, 23);
+      this.btnStart.TabIndex = 3;
+      this.btnStart.Text = "开始";
+      this.btnStart.UseVisualStyleBackColor = true;
+      this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
+      // 
+      // lblInfo
+      // 
+      this.lblInfo.AutoSize = true;
+      this.lblInfo.Location = new System.Drawing.Point(23, 68);
+      this.lblInfo.Name = "lblInfo";
+      this.lblInfo.Size = new System.Drawing.Size(0, 12);
+      this.lblInfo.TabIndex = 6;
+      // 
+      // index
+      // 
+      this.index.DataPropertyName = "Index";
+      this.index.HeaderText = "任务序号";
+      this.index.Name = "index";
+      // 
+      // URL
+      // 
+      this.URL.DataPropertyName = "URL";
+      this.URL.HeaderText = "URL";
+      this.URL.Name = "URL";
+      this.URL.Width = 500;
+      // 
+      // status
+      // 
+      this.status.DataPropertyName = "Status";
+      this.status.HeaderText = "状态";
+      this.status.Name = "status";
+      // 
+      // Form1
+      // 
+      this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
+      this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+      this.ClientSize = new System.Drawing.Size(1063, 574);
+      this.Controls.Add(this.lblInfo);
+      this.Controls.Add(this.flowLayoutPanel1);
+      this.Controls.Add(this.statusStrip1);
+      this.Controls.Add(this.dgvResult);
+      this.Name = "Form1";
+      this.Text = "Form1";
+      ((System.ComponentModel.ISupportInitialize)(this.dgvResult)).EndInit();
+      this.flowLayoutPanel1.ResumeLayout(false);
+      this.flowLayoutPanel1.PerformLayout();
+      this.ResumeLayout(false);
+      this.PerformLayout();
+
+    }
+
+    #endregion
+    private System.Windows.Forms.DataGridView dgvResult;
+    private System.Windows.Forms.StatusStrip statusStrip1;
+    private System.Windows.Forms.FlowLayoutPanel flowLayoutPanel1;
+    private System.Windows.Forms.TextBox txtUrl;
+    private System.Windows.Forms.Button btnStart;
+    private System.Windows.Forms.Label lblInfo;
+    private System.Windows.Forms.DataGridViewTextBoxColumn index;
+    private System.Windows.Forms.DataGridViewTextBoxColumn URL;
+    private System.Windows.Forms.DataGridViewTextBoxColumn status;
+  }
+}
